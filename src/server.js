@@ -60,7 +60,7 @@ function clawArgs(args) {
 }
 
 function configPath() {
-  return process.env.CLAWDBOT_CONFIG_PATH?.trim() || path.join(STATE_DIR, "clawdbot.json");
+  return process.env.CLAWDBOT_CONFIG_PATH?.trim() || path.join(STATE_DIR, "moltbot.json");
 }
 
 function isConfigured() {
@@ -104,6 +104,7 @@ async function startGateway() {
   const args = [
     "gateway",
     "run",
+    "--allow-unconfigured",
     "--bind",
     "loopback",
     "--port",
