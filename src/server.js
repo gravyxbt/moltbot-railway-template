@@ -465,7 +465,20 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
 
     // Set the model based on authChoice
     if (payload.authChoice === "openai-api-key") {
-      await runCmd(CLAWDBOT_NODE, clawArgs(["models", "set", "openai/gpt-4o"]));
+      // Try multiple approaches to set the model
+      const modelsList = await runCmd(CLAWDBOT_NODE, clawArgs(["models", "list"]));
+      extra += `\n[models list] exit=${modelsList.code}\n${modelsList.output}`;
+
+      const modelsSet = await runCmd(CLAWDBOT_NODE, clawArgs(["models", "set", "openai/gpt-4o"]));
+      extra += `\n[models set] exit=${modelsSet.code}\n${modelsSet.output}`;
+
+      // Also try setting via config
+      const configSet = await runCmd(CLAWDBOT_NODE, clawArgs(["config", "set", "agents.defaults.model.primary", "openai/gpt-4o"]));
+      extra += `\n[config set model] exit=${configSet.code}\n${configSet.output}`;
+
+      // Verify the model was set
+      const configGet = await runCmd(CLAWDBOT_NODE, clawArgs(["config", "get", "agents"]));
+      extra += `\n[config get agents] exit=${configGet.code}\n${configGet.output}`;
     }
 
     const channelsHelp = await runCmd(CLAWDBOT_NODE, clawArgs(["channels", "add", "--help"]));
