@@ -495,6 +495,7 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
         const cfgObj = {
           enabled: true,
           dmPolicy: "open",
+          allowFrom: ["*"],
           botToken: token,
           groupPolicy: "allowlist",
           streamMode: "partial",
