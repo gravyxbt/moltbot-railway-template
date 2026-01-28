@@ -103,7 +103,6 @@ async function startGateway() {
 
   const args = [
     "gateway",
-    "run",
     "--allow-unconfigured",
     "--bind",
     "loopback",
