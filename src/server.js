@@ -476,7 +476,7 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
         const token = payload.telegramToken.trim();
         const cfgObj = {
           enabled: true,
-          dmPolicy: "pairing",
+          dmPolicy: "open",
           botToken: token,
           groupPolicy: "allowlist",
           streamMode: "partial",
