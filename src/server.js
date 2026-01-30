@@ -117,6 +117,27 @@ function cleanupStaleLocks(dir) {
   }
 }
 
+async function ensureBrowserConfig() {
+  // Configure browser settings for container environment (headless + no sandbox)
+  const browserConfig = {
+    enabled: true,
+    headless: true,
+    noSandbox: true,
+  };
+  try {
+    const result = await runCmd(CLAWDBOT_NODE, clawArgs([
+      "config", "set", "--json", "browser", JSON.stringify(browserConfig)
+    ]));
+    if (result.code === 0) {
+      console.log("[wrapper] browser config set for container environment");
+    } else {
+      console.warn(`[wrapper] browser config set failed: ${result.output}`);
+    }
+  } catch (err) {
+    console.warn(`[wrapper] browser config error: ${err}`);
+  }
+}
+
 async function startGateway() {
   if (gatewayProc) return;
   if (!isConfigured()) throw new Error("Gateway cannot start: not configured");
@@ -127,6 +148,9 @@ async function startGateway() {
   // Clean up stale locks before starting gateway
   console.log("[wrapper] cleaning up stale locks...");
   cleanupStaleLocks(STATE_DIR);
+
+  // Configure browser for container environment
+  await ensureBrowserConfig();
 
   const args = [
     "gateway",
