@@ -94,12 +94,39 @@ async function waitForGatewayReady(opts = {}) {
   return false;
 }
 
+function cleanupStaleLocks(dir) {
+  // Remove stale .lock files left behind by previous container instances.
+  // These cause "session file locked" errors after redeployment.
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        cleanupStaleLocks(fullPath);
+      } else if (entry.name.endsWith(".lock")) {
+        try {
+          fs.rmSync(fullPath, { force: true });
+          console.log(`[wrapper] removed stale lock: ${fullPath}`);
+        } catch (e) {
+          console.warn(`[wrapper] failed to remove lock ${fullPath}: ${e}`);
+        }
+      }
+    }
+  } catch {
+    // Directory may not exist yet
+  }
+}
+
 async function startGateway() {
   if (gatewayProc) return;
   if (!isConfigured()) throw new Error("Gateway cannot start: not configured");
 
   fs.mkdirSync(STATE_DIR, { recursive: true });
   fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+
+  // Clean up stale locks before starting gateway
+  console.log("[wrapper] cleaning up stale locks...");
+  cleanupStaleLocks(STATE_DIR);
 
   const args = [
     "gateway",
