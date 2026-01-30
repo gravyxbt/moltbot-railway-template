@@ -167,9 +167,11 @@ async function ensureGatewayRunning() {
   if (!gatewayStarting) {
     gatewayStarting = (async () => {
       await startGateway();
-      const ready = await waitForGatewayReady({ timeoutMs: 20_000 });
+      const ready = await waitForGatewayReady({ timeoutMs: 60_000 });
       if (!ready) {
-        throw new Error("Gateway did not become ready in time");
+        // Gateway process may still start successfully after this timeout.
+        // Log warning but don't throw - let the process continue running.
+        console.warn("[wrapper] gateway did not respond within timeout, but process may still be starting");
       }
     })().finally(() => {
       gatewayStarting = null;
