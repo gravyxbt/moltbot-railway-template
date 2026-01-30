@@ -696,7 +696,26 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   if (!SETUP_PASSWORD) {
     console.warn("[wrapper] WARNING: SETUP_PASSWORD is not set; /setup will error.");
   }
-  // Don't start gateway unless configured; proxy will ensure it starts.
+
+  // Auto-start gateway on boot if already configured.
+  // This is critical for messaging channels (Telegram/Discord) which need
+  // the gateway running immediately to receive incoming messages.
+  if (isConfigured()) {
+    console.log("[wrapper] config detected, auto-starting gateway...");
+    ensureGatewayRunning()
+      .then((result) => {
+        if (result.ok) {
+          console.log("[wrapper] gateway started successfully");
+        } else {
+          console.error(`[wrapper] gateway failed to start: ${result.reason}`);
+        }
+      })
+      .catch((err) => {
+        console.error(`[wrapper] gateway startup error: ${err}`);
+      });
+  } else {
+    console.log("[wrapper] not configured yet, gateway will start after setup");
+  }
 });
 
 server.on("upgrade", async (req, socket, head) => {
