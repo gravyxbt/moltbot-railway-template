@@ -152,6 +152,23 @@ async function startGateway() {
   // Configure browser for container environment
   await ensureBrowserConfig();
 
+  // Ensure openclaw's default workspace dir points to the persistent volume workspace.
+  // Without this, openclaw injects blank template files as Project Context instead of
+  // the real populated files on the volume.
+  const oclawWorkspace = path.join(os.homedir(), ".openclaw", "workspace");
+  try {
+    const stat = fs.lstatSync(oclawWorkspace);
+    if (!stat.isSymbolicLink() || fs.realpathSync(oclawWorkspace) !== fs.realpathSync(WORKSPACE_DIR)) {
+      fs.rmSync(oclawWorkspace, { recursive: true, force: true });
+      fs.symlinkSync(WORKSPACE_DIR, oclawWorkspace);
+      console.log(`[wrapper] linked openclaw workspace → ${WORKSPACE_DIR}`);
+    }
+  } catch {
+    fs.rmSync(oclawWorkspace, { recursive: true, force: true });
+    fs.symlinkSync(WORKSPACE_DIR, oclawWorkspace);
+    console.log(`[wrapper] linked openclaw workspace → ${WORKSPACE_DIR}`);
+  }
+
   const args = [
     "gateway",
     "--allow-unconfigured",
