@@ -185,6 +185,38 @@ async function startGateway() {
   });
 }
 
+// After cold-start, patch openclaw.json so user config's dmPolicy wins over the
+// clawdbot binary's hardcoded default ("pairing"). Touching moltbot.json triggers
+// a file-change reload which does NOT re-write openclaw.json, so the patch persists.
+async function applyUserDmPolicy() {
+  const oclawJsonPath = path.join(os.homedir(), ".openclaw", "openclaw.json");
+  try {
+    const userCfgRaw = fs.readFileSync(configPath(), "utf8");
+    const userCfg = JSON.parse(userCfgRaw);
+    const userDmPolicy = userCfg?.channels?.telegram?.dmPolicy;
+    if (!userDmPolicy) return;
+
+    const oclawRaw = fs.readFileSync(oclawJsonPath, "utf8");
+    const oclawCfg = JSON.parse(oclawRaw);
+    const tg = oclawCfg?.channels?.telegram;
+    if (!tg || tg.dmPolicy === userDmPolicy) return;
+
+    tg.dmPolicy = userDmPolicy;
+    if (userDmPolicy === "open" && !tg.allowFrom) {
+      tg.allowFrom = userCfg?.channels?.telegram?.allowFrom ?? ["*"];
+    }
+    fs.writeFileSync(oclawJsonPath, JSON.stringify(oclawCfg, null, 2), "utf8");
+    console.log(`[wrapper] patched openclaw.json: channels.telegram.dmPolicy → ${userDmPolicy}`);
+
+    // Touch user config to trigger a file-change reload (does not re-write openclaw.json)
+    const now = new Date();
+    fs.utimesSync(configPath(), now, now);
+    console.log("[wrapper] triggered gateway config reload for dmPolicy patch");
+  } catch (err) {
+    console.error("[wrapper] dmPolicy patch failed:", String(err));
+  }
+}
+
 async function ensureGatewayRunning() {
   if (!isConfigured()) return { ok: false, reason: "not configured" };
   if (gatewayProc) return { ok: true };
@@ -197,6 +229,7 @@ async function ensureGatewayRunning() {
         // Log warning but don't throw - let the process continue running.
         console.warn("[wrapper] gateway did not respond within timeout, but process may still be starting");
       }
+      await applyUserDmPolicy();
     })().finally(() => {
       gatewayStarting = null;
     });
